@@ -18,9 +18,9 @@ class SolenoidValve {
     int getSolenoidState() const;
 
   private:
-    int valveState;
-    unsigned long startTime;
-    int _digitalPin;
+    int valveState; // current state of valve -- either STATE_OPEN or STATE_CLOSED
+    unsigned long startTime; // time that valve was opened
+    int _digitalPin; // digital pin number
 
     void closeValve();
 

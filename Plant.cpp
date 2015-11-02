@@ -1,6 +1,11 @@
 #include "Plant.h"
 
-Plant::Plant(String name, int lowerMoistureThreshold, int upperMoistureThreshold, int moisturePin, int solenoidPin) {
+/**
+  Constructor
+  Description:
+    Initializes private variables and reads a sensor value
+**/
+Plant::Plant(String name, int upperMoistureThreshold, int lowerMoistureThreshold, int moisturePin, int solenoidPin) {
   _name = name;
   _isQueued = false;
   valve = new SolenoidValve(solenoidPin);
@@ -10,7 +15,16 @@ Plant::Plant(String name, int lowerMoistureThreshold, int upperMoistureThreshold
   _moistureThresholdHit = false;
   _localSumCounter = 1;
   _watering = false;
-  readPlantMoistureIntoCurrentMoisture();
+  readPlantMoisture();
+}
+
+/**
+  Destructor
+  Description:
+    Deallocs the valve
+**/
+Plant::~Plant() {
+  delete valve;
 }
 
 /**
@@ -46,6 +60,7 @@ bool Plant::isWatering() const {
 **/
 int Plant::pollPlantSensor() {
   if (readPlantMoisture()) {
+    //Util::print("Plant moisture: %d\n", _averageMoisture);
     // if the valve is already open
     if (valve->getSolenoidState()) {
       // close the valve if the necessary amount of time has elapsed
@@ -63,14 +78,14 @@ int Plant::pollPlantSensor() {
       }
       // if the current moisture level is now above the upper moisture threshold,
       // we can just reset the moisture threshold bool and leave the valve closed
-      else if (_averageMoisture < _upperMoistureThreshold) {
+      else if (_averageMoisture < _lowerMoistureThreshold) {
         _moistureThresholdHit = false;
         return PLANT_DEFAULT;
       }
       // if the moisture threshold was previously hit, we are still below the upper 
       // moisture threshold, and enough time has elapsed since we last opened the solenoid valve,
       // then we should open the valve again
-      else if ((_averageMoisture > _upperMoistureThreshold) && _moistureThresholdHit &&
+      else if ((_averageMoisture > _lowerMoistureThreshold) && _moistureThresholdHit &&
           (millis() - _startTime) > TIME_TO_WAIT_UNTIL_NEXT_VALVE_OPEN) {
         _isQueued = true;
         return PLANT_NEEDS_WATER;
@@ -78,7 +93,7 @@ int Plant::pollPlantSensor() {
 
       // if we are below the lower moisture threshold, open the valve and set the bool
       // indicating that we have hit the moisture threshold.
-      else if (_averageMoisture > _lowerMoistureThreshold && !_moistureThresholdHit) {
+      else if (_averageMoisture > _upperMoistureThreshold && !_moistureThresholdHit) {
         _moistureThresholdHit = true;
         _isQueued = true;
         return PLANT_NEEDS_WATER;
