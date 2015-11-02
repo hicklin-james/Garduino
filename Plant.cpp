@@ -76,13 +76,13 @@ int Plant::pollPlantSensor() {
       if (_watering || _isQueued) {
         return PLANT_DEFAULT;
       }
-      // if the current moisture level is now above the upper moisture threshold,
+      // if the current moisture level is now below the lower moisture threshold,
       // we can just reset the moisture threshold bool and leave the valve closed
       else if (_averageMoisture < _lowerMoistureThreshold) {
         _moistureThresholdHit = false;
         return PLANT_DEFAULT;
       }
-      // if the moisture threshold was previously hit, we are still below the upper 
+      // if the moisture threshold was previously hit, we are still above the lower 
       // moisture threshold, and enough time has elapsed since we last opened the solenoid valve,
       // then we should open the valve again
       else if ((_averageMoisture > _lowerMoistureThreshold) && _moistureThresholdHit &&
@@ -91,7 +91,7 @@ int Plant::pollPlantSensor() {
         return PLANT_NEEDS_WATER;
       }
 
-      // if we are below the lower moisture threshold, open the valve and set the bool
+      // if we are above the upper moisture threshold, open the valve and set the bool
       // indicating that we have hit the moisture threshold.
       else if (_averageMoisture > _upperMoistureThreshold && !_moistureThresholdHit) {
         _moistureThresholdHit = true;
