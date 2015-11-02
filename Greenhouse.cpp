@@ -1,5 +1,9 @@
 #include "Greenhouse.h"
 
+struct PlantAtts Greenhouse::plant1 = {"Basil",2,0,900,800};
+struct PlantAtts Greenhouse::plant2 = {"Rosemary",2,0,900,800};
+struct PlantAtts Greenhouse::initialPlantAtts[NUM_PLANTS] = {plant1, plant2};
+
 /**
   Constructor
   Description:
@@ -11,7 +15,7 @@ Greenhouse::Greenhouse() {
     Plant *plant = new Plant(plantAtts.name, plantAtts.lowerMoistureThreshold, plantAtts.upperMoistureThreshold, plantAtts.moisturePin, plantAtts.solenoidPin);
     plants[i] = plant;
   }
-  currentlyWatering = NULL;
+  currentlyWatering = NULL; 
 }
 
 /**
@@ -40,7 +44,7 @@ void Greenhouse::poll() {
     currentlyWatering->startWatering();
   }
 
-  pollPlants()
+  pollPlants(); 
 }
 
 /**
