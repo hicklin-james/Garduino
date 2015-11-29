@@ -1,8 +1,8 @@
 #include "Greenhouse.h"
 
 struct PlantAtts Greenhouse::plant1 = {"Basil",2,0,900,800};
-struct PlantAtts Greenhouse::plant2 = {"Rosemary",2,0,900,800};
-struct PlantAtts Greenhouse::initialPlantAtts[NUM_PLANTS] = {plant1, plant2};
+//struct PlantAtts Greenhouse::plant2 = {"Rosemary",2,0,900,800};
+struct PlantAtts Greenhouse::initialPlantAtts[NUM_PLANTS] = {plant1};
 
 /**
   Constructor
@@ -10,12 +10,17 @@ struct PlantAtts Greenhouse::initialPlantAtts[NUM_PLANTS] = {plant1, plant2};
     Initializes plant arrays using static variables defined in header file.
 **/
 Greenhouse::Greenhouse() {
+  //Util::print("Watering pin");
+  //Util::print("Watering pin: %d\n", _wateringPinLED);
+  //Util::print("Watering pin: %d\n", _wateringPinLED);
   for (int i = 0; i < NUM_PLANTS; i++) {
     struct PlantAtts plantAtts = initialPlantAtts[i];
     Plant *plant = new Plant(plantAtts.name, plantAtts.lowerMoistureThreshold, plantAtts.upperMoistureThreshold, plantAtts.moisturePin, plantAtts.solenoidPin);
     plants[i] = plant;
   }
-  currentlyWatering = NULL; 
+  currentlyWatering = NULL;
+
+  pinMode(WATERING_PIN_LED, OUTPUT);
 }
 
 /**
@@ -42,6 +47,10 @@ void Greenhouse::poll() {
   if (!plantsToWaterQueue.isEmpty() && (currentlyWatering == NULL || !currentlyWatering->isWatering())) {
     currentlyWatering = plantsToWaterQueue.pop();
     currentlyWatering->startWatering();
+    digitalWrite(WATERING_PIN_LED, HIGH);
+  }
+  else if (!currentlyWatering || !currentlyWatering->isWatering()) {
+    digitalWrite(WATERING_PIN_LED, LOW);
   }
 
   pollPlants(); 

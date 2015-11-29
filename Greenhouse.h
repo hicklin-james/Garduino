@@ -1,8 +1,9 @@
 #ifndef __GREENHOUSE_H_INCLUDED__
 #define __GREENHOUSE_H_INCLUDED__
 
-#define NUM_PLANTS 2
+#define NUM_PLANTS 1
 #define MAX_PLANTS 10
+#define WATERING_PIN_LED 13
 
 #include "Plant.h"
 #include <Arduino.h>
@@ -22,6 +23,7 @@ class Greenhouse {
     Greenhouse();
     ~Greenhouse();
     void poll();
+    
   private:
     Plant *plants[MAX_PLANTS]; // Array of plants, filled up in constructor
     QueueList<Plant*> plantsToWaterQueue; // Queue of plants that need to be watered

@@ -60,7 +60,7 @@ bool Plant::isWatering() const {
 **/
 int Plant::pollPlantSensor() {
   if (readPlantMoisture()) {
-    //Util::print("Plant moisture: %d\n", _averageMoisture);
+    // Util::print("Plant moisture: %d\n", _averageMoisture);
     // if the valve is already open
     if (valve->getSolenoidState()) {
       // close the valve if the necessary amount of time has elapsed
