@@ -1,8 +1,8 @@
 #include "Greenhouse.h"
 
-struct PlantAtts Greenhouse::plant1 = {"Basil",2,0,900,800};
-//struct PlantAtts Greenhouse::plant2 = {"Rosemary",2,0,900,800};
-struct PlantAtts Greenhouse::initialPlantAtts[NUM_PLANTS] = {plant1};
+struct PlantAtts Greenhouse::plant1 = {"Basil",2,0,3,4,275,405};
+struct PlantAtts Greenhouse::plant2 = {"Sage",5,1,6,-1,275,405};
+struct PlantAtts Greenhouse::initialPlantAtts[NUM_PLANTS] = {plant1, plant2};
 
 /**
   Constructor
@@ -10,12 +10,9 @@ struct PlantAtts Greenhouse::initialPlantAtts[NUM_PLANTS] = {plant1};
     Initializes plant arrays using static variables defined in header file.
 **/
 Greenhouse::Greenhouse() {
-  //Util::print("Watering pin");
-  //Util::print("Watering pin: %d\n", _wateringPinLED);
-  //Util::print("Watering pin: %d\n", _wateringPinLED);
   for (int i = 0; i < NUM_PLANTS; i++) {
     struct PlantAtts plantAtts = initialPlantAtts[i];
-    Plant *plant = new Plant(plantAtts.name, plantAtts.lowerMoistureThreshold, plantAtts.upperMoistureThreshold, plantAtts.moisturePin, plantAtts.solenoidPin);
+    Plant *plant = new Plant(plantAtts.name, plantAtts.lowerMoistureThreshold, plantAtts.upperMoistureThreshold, plantAtts.moisturePin, plantAtts.moisturePowerPin, plantAtts.growLightPin, plantAtts.solenoidPin);
     plants[i] = plant;
   }
   currentlyWatering = NULL;
@@ -64,6 +61,7 @@ void Greenhouse::poll() {
 void Greenhouse::pollPlants() {
   for (int i = 0; i < NUM_PLANTS; i++) {
     Plant *plant = plants[i];
+    plant->evaluateGrowLights();
     int plantStatus = plant->pollPlantSensor();
     // If the plant indicates that it needs to be watered, add it to the plantsToWater queue
     if (plantStatus == PLANT_NEEDS_WATER) {

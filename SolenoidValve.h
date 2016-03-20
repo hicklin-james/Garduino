@@ -3,7 +3,7 @@
 
 #define STATE_CLOSED 0
 #define STATE_OPEN 1
-#define TIME_TO_LEAVE_VALVE_OPEN 2000
+#define TIME_TO_LEAVE_VALVE_OPEN 6000
 
 #include <Arduino.h>
 #include <Time.h>

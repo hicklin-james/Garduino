@@ -17,6 +17,7 @@ SolenoidValve::SolenoidValve(int digitalPin) {
     Opens the valve and resets the startTime to the current time
 **/
 void SolenoidValve::openValve() {
+  Util::print("Opening valve: %d\n", _digitalPin);
   digitalWrite(_digitalPin, HIGH);
   valveState = STATE_OPEN;
   startTime = millis();

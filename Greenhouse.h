@@ -1,7 +1,7 @@
 #ifndef __GREENHOUSE_H_INCLUDED__
 #define __GREENHOUSE_H_INCLUDED__
 
-#define NUM_PLANTS 1
+#define NUM_PLANTS 2
 #define MAX_PLANTS 10
 #define WATERING_PIN_LED 13
 
@@ -14,6 +14,8 @@ struct PlantAtts {
   String name;
   int solenoidPin;
   int moisturePin;
+  int moisturePowerPin;
+  int growLightPin;
   int lowerMoistureThreshold;
   int upperMoistureThreshold;
 };

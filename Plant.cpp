@@ -5,7 +5,7 @@
   Description:
     Initializes private variables and reads a sensor value
 **/
-Plant::Plant(String name, int upperMoistureThreshold, int lowerMoistureThreshold, int moisturePin, int solenoidPin) {
+Plant::Plant(String name, int upperMoistureThreshold, int lowerMoistureThreshold, int moisturePin, int moisturePowerPin, int growLightPin, int solenoidPin) {
   _name = name;
   _isQueued = false;
   valve = new SolenoidValve(solenoidPin);
@@ -15,7 +15,19 @@ Plant::Plant(String name, int upperMoistureThreshold, int lowerMoistureThreshold
   _moistureThresholdHit = false;
   _localSumCounter = 1;
   _watering = false;
-  readPlantMoisture();
+  _lastMoistureReading = millis() - TIME_BETWEEN_MOISTURE_READINGS;
+  _moisturePowerPin = moisturePowerPin;
+  _isLit = 0;
+  _timeLightTurnedOn = 0;
+  _timeLightTurnedOff = 0;
+  _lastHour = hour();
+  _lastDay = day();
+  _lastNow = 0;
+  _growLightPin = growLightPin;
+  _firstReadSincePowered = true;
+  pinMode(moisturePowerPin, OUTPUT);
+  pinMode(growLightPin, OUTPUT);
+  initAnalogSensor();
 }
 
 /**
@@ -50,6 +62,43 @@ bool Plant::isWatering() const {
   return _watering;
 }
 
+// now = 100
+// _timeLightTurnedOff = 65,000
+// _timeLightTurnedOn = 64,000
+
+int Plant::evaluateGrowLights() {
+  unsigned long now = millis();
+  if (_growLightPin >= 0) {
+    if (now != 0) {
+      //Util::print("Time light turned on: %d\n", _timeLightTurnedOn);
+      //Util::print("now: %d\n", now);
+      if (_timeLightTurnedOff != 0 && ((now - _timeLightTurnedOff) < (MS_IN_DAY - MS_OF_LIGHT))) {
+        //Util::print("%d\n", MS_IN_DAY - MS_OF_LIGHT);
+        return 0;
+      }
+      else if (_isLit == 1 && _timeLightTurnedOn != 0 && ((now - _timeLightTurnedOn) > MS_OF_LIGHT)) {
+        // turn the light off
+        //Util::print("Turning Light Off\n");
+        //Util::print("pin: %d", _growLightPin);
+        digitalWrite(_growLightPin, LOW);
+        _timeLightTurnedOff = now;
+        _isLit = 0;
+      }
+      else {
+        // turn the light on
+        if (_isLit == 0) {
+          Util::print("Turning Light On\n");
+          digitalWrite(_growLightPin, HIGH);
+          _timeLightTurnedOn = now;
+          Util::print("TimeLightTurnedOn: %u\n", _timeLightTurnedOn);
+          _isLit = 1;
+        }
+      }
+    }
+    _lastNow = now;
+  }
+}
+
 /**
   Returns: int
     PLANT_DEFAULT -> no action to be taken
@@ -60,8 +109,12 @@ bool Plant::isWatering() const {
 **/
 int Plant::pollPlantSensor() {
   if (readPlantMoisture()) {
-    // Util::print("Plant moisture: %d\n", _averageMoisture);
-    // if the valve is already open
+    Util::print("Plant moisture: %d\n", _averageMoisture);
+
+    // if we haven't returned already,
+    // submit the reading to the server
+
+     // if the valve is already open
     if (valve->getSolenoidState()) {
       // close the valve if the necessary amount of time has elapsed
       ///Util::print("Valve is open, so checking whether it should be closed\n");
@@ -80,9 +133,11 @@ int Plant::pollPlantSensor() {
       // we can just reset the moisture threshold bool and leave the valve closed
       else if (_averageMoisture < _lowerMoistureThreshold) {
         _moistureThresholdHit = false;
+        digitalWrite(_moisturePowerPin, LOW);
+        _isIdle = true;
         return PLANT_DEFAULT;
       }
-      // if the moisture threshold was previously hit, we are still above the lower 
+      // if the moisture threshold was previously hit, we are still above the lower
       // moisture threshold, and enough time has elapsed since we last opened the solenoid valve,
       // then we should open the valve again
       else if ((_averageMoisture > _lowerMoistureThreshold) && _moistureThresholdHit &&
@@ -112,17 +167,43 @@ int Plant::pollPlantSensor() {
     If the local counter is at the predefined interval, calculate an average
     value for the moisture and store it in _averageMoisture. The reason we 
     average it is to prevent random variations in the value from triggering
-    the plant watering when it doesn't need to be.
+    the plant watering when it doesn't need to be watered.
 **/
 bool Plant::readPlantMoisture() {
-  _currentMoisture = analogRead(_moisturePin);
-  _localMoistureSum += _currentMoisture;
-  if (_localSumCounter == MOISTURE_AVERAGE_INTERVAL) {
-    _averageMoisture = _localMoistureSum / MOISTURE_AVERAGE_INTERVAL;
-    _localSumCounter = 1;
-    _localMoistureSum = 0;
-    return true;
+  if (((millis() - _lastMoistureReading) > TIME_BETWEEN_MOISTURE_READINGS) && _isIdle) {
+    initAnalogSensor();
   }
-  _localSumCounter++;
-  return false;
+  if (!_isIdle) {
+    _currentMoisture = analogRead(_moisturePin);
+    _localMoistureSum += _currentMoisture;
+    if (_localSumCounter == MOISTURE_AVERAGE_INTERVAL) {
+      _averageMoisture = _localMoistureSum / MOISTURE_AVERAGE_INTERVAL;
+      _localSumCounter = 1;
+      _localMoistureSum = 0;
+      if (_firstReadSincePowered) {
+        _firstReadSincePowered = false;
+        return false;
+      }
+      else {
+        return true;
+      }
+    }
+    _localSumCounter++;
+    return false;
+  }
+  else {
+    return false;
+  }
+}
+
+bool Plant::analogSensorReady() {
+  return ((millis() - _analogSensorInitTime) > ANALOG_SENSOR_TIME_TO_INIT);
+}
+
+void Plant::initAnalogSensor() {
+  digitalWrite(_moisturePowerPin, HIGH);
+  _analogSensorInitTime = millis();
+  _lastMoistureReading = millis();
+  _isIdle = false;
+  _firstReadSincePowered = true;
 }
