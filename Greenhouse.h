@@ -8,6 +8,10 @@
 #include "Plant.h"
 #include <Arduino.h>
 #include <QueueList.h>
+#include <RequestManager.h>
+
+extern const char ssid[8];
+extern const char password[14];
 
 // Struct used to declare new plants. Add new PlantAtts as static vars below.
 struct PlantAtts {
@@ -38,6 +42,8 @@ class Greenhouse {
     static struct PlantAtts plant1; //= {"Basil",2,0,900,800};
     static struct PlantAtts plant2; //= {"Rosemary",2,0,900,800};
     static struct PlantAtts initialPlantAtts[NUM_PLANTS]; //= {plant1, plant2};
+
+    RequestManager _reqManager;
 };
 
 

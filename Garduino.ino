@@ -3,6 +3,9 @@
 // file before you can include it in linked h files. 
 #include <Time.h>
 #include <QueueList.h>
+#include <RequestManager.h>
+#include <MemoryFree.h>
+#include <SoftwareSerial.h>
 // --------------------------------------------------------------------------------------- //
 
 // --------------------------------------------------------------------------------------- //
@@ -22,3 +25,5 @@ void setup() {
 void loop() {
   greenHouse->poll();
 }
+
+

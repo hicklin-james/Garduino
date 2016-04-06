@@ -2,8 +2,9 @@
 #define __PLANT_H_INCLUDED__
 
 #define TIME_TO_WAIT_UNTIL_NEXT_VALVE_OPEN 600000
-#define MOISTURE_AVERAGE_INTERVAL 10000
+#define MOISTURE_AVERAGE_INTERVAL 100
 #define TIME_BETWEEN_MOISTURE_READINGS 3600000
+//#define TIME_BETWEEN_MOISTURE_READINGS 600000
 //#define TIME_BETWEEN_MOISTURE_READINGS 10000
 #define ANALOG_SENSOR_TIME_TO_INIT 200
 
@@ -17,13 +18,14 @@
 #include "SolenoidValve.h"
 #include <Time.h>
 #include "Util.h"
+#include <RequestManager.h>
 
 class Plant {
 
   public:
     Plant(String name, int upperMoistureThreshold, int lowerMoistureThreshold, int moisturePin, int moisturePowerPin, int growLightPin, int solenoidPin);
     ~Plant();
-    int pollPlantSensor();
+    int pollPlantSensor(RequestManager reqManager);
     int evaluateGrowLights();
     void startWatering();
     bool isWatering() const;
@@ -35,7 +37,7 @@ class Plant {
     int _lowerMoistureThreshold; // lower moisture threshold --- LOW values mean more moisture
     int _upperMoistureThreshold; // upper moisture threshold --- HIGH values mean less moisture
     int _currentMoisture; // current moisture reading on sensor
-    int _averageMoisture; // average moisture reading over MOISTURE_AVERAGE_INTERVAL reads
+    int _medianMoisture; // average moisture reading over MOISTURE_AVERAGE_INTERVAL reads
     unsigned long _localMoistureSum; // local moisture sum counter to calculate average
     int _localSumCounter; // local counter value to calculate average
     unsigned long _startTime; // time that watering started
@@ -54,6 +56,7 @@ class Plant {
     int _lastHour;
     int _lastDay;
     bool _firstReadSincePowered;
+    int _moistureReadings[MOISTURE_AVERAGE_INTERVAL];
 
     void initAnalogSensor();
     bool analogSensorReady();
@@ -61,3 +64,5 @@ class Plant {
 };
 
 #endif
+
+

@@ -13,7 +13,7 @@ Plant::Plant(String name, int upperMoistureThreshold, int lowerMoistureThreshold
   _upperMoistureThreshold = upperMoistureThreshold;
   _moisturePin = moisturePin;
   _moistureThresholdHit = false;
-  _localSumCounter = 1;
+  _localSumCounter = 0;
   _watering = false;
   _lastMoistureReading = millis() - TIME_BETWEEN_MOISTURE_READINGS;
   _moisturePowerPin = moisturePowerPin;
@@ -62,10 +62,6 @@ bool Plant::isWatering() const {
   return _watering;
 }
 
-// now = 100
-// _timeLightTurnedOff = 65,000
-// _timeLightTurnedOn = 64,000
-
 int Plant::evaluateGrowLights() {
   unsigned long now = millis();
   if (_growLightPin >= 0) {
@@ -87,10 +83,10 @@ int Plant::evaluateGrowLights() {
       else {
         // turn the light on
         if (_isLit == 0) {
-          Util::print("Turning Light On\n");
+          //Util::print("Turning Light On\n");
           digitalWrite(_growLightPin, HIGH);
           _timeLightTurnedOn = now;
-          Util::print("TimeLightTurnedOn: %u\n", _timeLightTurnedOn);
+          //Util::print("TimeLightTurnedOn: %u\n", _timeLightTurnedOn);
           _isLit = 1;
         }
       }
@@ -107,12 +103,16 @@ int Plant::evaluateGrowLights() {
     Main plant logic function used to determine what action needs to be taken on the plant,
     if any.
 **/
-int Plant::pollPlantSensor() {
+int Plant::pollPlantSensor(RequestManager reqManager) {
   if (readPlantMoisture()) {
-    Util::print("Plant moisture: %d\n", _averageMoisture);
-
+    String reqString = "/sensor_readings/add_reading?plant_name=" + _name + "&value=" + _medianMoisture;
+    //reqManager.get("611f2ca7.ngrok.io", "/boo?test=test", 80);
+    //Serial.println(reqString);
+    reqManager.get("garduino.jameshicklin.com", reqString.c_str(), 80);
+    //char str[ ] = "abbf535e.ngrok.io";
+    //Serial.println(str);
+    //reqManager.get("abbf535e.ngrok.io", "/boo\?test=test", 80);
     // if we haven't returned already,
-    // submit the reading to the server
 
      // if the valve is already open
     if (valve->getSolenoidState()) {
@@ -131,16 +131,16 @@ int Plant::pollPlantSensor() {
       }
       // if the current moisture level is now below the lower moisture threshold,
       // we can just reset the moisture threshold bool and leave the valve closed
-      else if (_averageMoisture < _lowerMoistureThreshold) {
+      else if ((_medianMoisture < _lowerMoistureThreshold) && _moistureThresholdHit) {
         _moistureThresholdHit = false;
-        digitalWrite(_moisturePowerPin, LOW);
+        digitalWrite(_moisturePowerPin, LOW);   
         _isIdle = true;
         return PLANT_DEFAULT;
       }
       // if the moisture threshold was previously hit, we are still above the lower
       // moisture threshold, and enough time has elapsed since we last opened the solenoid valve,
       // then we should open the valve again
-      else if ((_averageMoisture > _lowerMoistureThreshold) && _moistureThresholdHit &&
+      else if ((_medianMoisture > _lowerMoistureThreshold) && _moistureThresholdHit &&
           (millis() - _startTime) > TIME_TO_WAIT_UNTIL_NEXT_VALVE_OPEN) {
         _isQueued = true;
         return PLANT_NEEDS_WATER;
@@ -148,10 +148,16 @@ int Plant::pollPlantSensor() {
 
       // if we are above the upper moisture threshold, open the valve and set the bool
       // indicating that we have hit the moisture threshold.
-      else if (_averageMoisture > _upperMoistureThreshold && !_moistureThresholdHit) {
+      else if (_medianMoisture > _upperMoistureThreshold && !_moistureThresholdHit) {
         _moistureThresholdHit = true;
         _isQueued = true;
         return PLANT_NEEDS_WATER;
+      }
+
+      else if ((_medianMoisture < _lowerMoistureThreshold) && !_moistureThresholdHit) {
+        digitalWrite(_moisturePowerPin, LOW);   
+        _isIdle = true;
+        return PLANT_DEFAULT;
       }
     }
   }
@@ -160,13 +166,13 @@ int Plant::pollPlantSensor() {
 
 /**
   Returns: bool
-    true -> a new average value has been calculated
-    false -> no new average has been calculated
+    true -> a new median value has been calculated
+    false -> no new median has been calculated
   Description:
     This function reads the current analog value from the moisture sensor.
-    If the local counter is at the predefined interval, calculate an average
-    value for the moisture and store it in _averageMoisture. The reason we 
-    average it is to prevent random variations in the value from triggering
+    If the local counter is at the predefined interval, calculate a median
+    value for the moisture and store it in _medianMoisture. The reason we 
+    use the median is to prevent random variations in the value from triggering
     the plant watering when it doesn't need to be watered.
 **/
 bool Plant::readPlantMoisture() {
@@ -175,11 +181,14 @@ bool Plant::readPlantMoisture() {
   }
   if (!_isIdle) {
     _currentMoisture = analogRead(_moisturePin);
-    _localMoistureSum += _currentMoisture;
-    if (_localSumCounter == MOISTURE_AVERAGE_INTERVAL) {
-      _averageMoisture = _localMoistureSum / MOISTURE_AVERAGE_INTERVAL;
-      _localSumCounter = 1;
-      _localMoistureSum = 0;
+    _moistureReadings[_localSumCounter] = _currentMoisture;
+   // _localMoistureSum += _currentMoisture;
+    if (_localSumCounter == (MOISTURE_AVERAGE_INTERVAL - 1)) {
+      Util::quickSort(_moistureReadings, 0, MOISTURE_AVERAGE_INTERVAL-1);
+      _medianMoisture = _moistureReadings[MOISTURE_AVERAGE_INTERVAL / 2];
+      //_averageMoisture = _localMoistureSum / MOISTURE_AVERAGE_INTERVAL;
+      _localSumCounter = 0;
+      //_localMoistureSum = 0;
       if (_firstReadSincePowered) {
         _firstReadSincePowered = false;
         return false;
@@ -207,3 +216,5 @@ void Plant::initAnalogSensor() {
   _isIdle = false;
   _firstReadSincePowered = true;
 }
+
+
